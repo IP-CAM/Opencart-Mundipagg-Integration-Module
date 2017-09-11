@@ -4,7 +4,42 @@ namespace Tests;
 
 class MundipaggAdminTest extends OpenCartTest
 {
-    public function testLoggedInCall()
+    public function setUp()
+    {
+        parent::setUp();
+        $this->loadModel('customer/custom_field');
+        $this->model_customer_custom_field->addCustomField([
+            'custom_field_description' => [1 => ['name' => 'Número']],
+            'location' => 'address',
+            'type' => 'text',
+            'value' => '',
+            'validation' => '',
+            'custom_field_customer_group' => [
+                0 => [
+                    'customer_group_id' => 1,
+                    'required' => 1
+                ]
+            ],
+            'status' => 1,
+            'sort_order' => 1
+        ]);
+        $this->model_customer_custom_field->addCustomField([
+            'custom_field_description' => [1 => ['name' => 'Complemento']],
+            'location' => 'address',
+            'type' => 'text',
+            'value' => '',
+            'validation' => '',
+            'custom_field_customer_group' => [
+                0 => [
+                    'customer_group_id' => 1,
+                    'required' => 1
+                ]
+            ],
+            'status' => 1,
+            'sort_order' => 2
+        ]);
+    }
+    public function testSetupModule()
     {
         $this->login('admin', 'admin');
         $response = $this->dispatchAction(
@@ -19,6 +54,8 @@ class MundipaggAdminTest extends OpenCartTest
             [
                 'payment_mundipagg_status' => 1,
                 'payment_mundipagg_title' => 'MundiPagg Title',
+                'payment_mundipagg_mapping_number' => 1,
+                'payment_mundipagg_mapping_complement' => 2,
                 'payment_mundipagg_prod_secret_key' => getenv('PROD_SECRET_KEY'),
                 'payment_mundipagg_test_secret_key' => getenv('TEST_SECRET_KEY'),
                 'payment_mundipagg_test_mode' => 1,
@@ -80,7 +117,7 @@ class MundipaggAdminTest extends OpenCartTest
         $this->assertInstanceOf('stdClass', $actual);
     }
 
-    public function tearDown()
+    public function _tearDown()
     {
         $response = $this->dispatchAction(
             'extension/extension/payment/uninstall',

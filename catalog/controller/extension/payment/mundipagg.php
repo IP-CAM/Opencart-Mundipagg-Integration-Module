@@ -385,5 +385,15 @@ class ControllerExtensionPaymentMundipagg extends Controller
         $this->updateOrderStatus($response);
         $this->saveMPOrderId($response->id, $this->session->data['order_id']);
         $this->response->redirect($this->url->link('checkout/success', '', true));
+
+        http_response_code(302);
+        $this->response->addHeader('Location: '.
+            str_replace(
+                ['&amp;', "\n", "\r"],
+                ['&', '', ''],
+                $this->url->link('checkout/success', '', true)
+            )
+        );
+        $this->response->setOutput(true);
     }
 }
