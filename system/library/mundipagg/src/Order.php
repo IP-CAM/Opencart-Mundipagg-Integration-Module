@@ -24,9 +24,12 @@ class Order
     /**
      * @var MundiAPIClient
      */
-    private $apiClient;
+    private static $apiClient;
     private $openCart;
-    private $settings;
+    /**
+     * @var Settings
+     */
+    private static $settings;
     private $modelOrder;
 
     private $mundipaggCustomerModel;
@@ -36,18 +39,39 @@ class Order
      */
     public function __construct($openCart)
     {
-        $this->settings = new Settings($openCart);
-
         $this->openCart = $openCart;
         $this->orderInterest = 0;
+    }
 
-        $this->apiClient = new MundiAPIClient($this->settings->getSecretKey(), $this->settings->getPassword());
+    /**
+     * @return Settings
+     */
+    public function getSettings()
+    {
+        if (!$this->settings) {
+            $this->settings = new Settings($this->openCart);
+        }
+        return $this->settings;
+    }
+
+    /**
+     * @return MundiAPIClient
+     */
+    public function getApiClient()
+    {
+        if (!$this->apiClient) {
+            $this->apiClient = new MundiAPIClient(
+                $this->getSettings()->getSecretKey(),
+                $this->getSettings()->getPassword()
+            );
+        }
+        return $this->apiClient;
     }
 
     public function __call(string $name, array $arguments)
     {
-        if (method_exists($this->apiClient, $name)) {
-            return call_user_func_array([$this->apiClient, $name], $arguments);
+        if (method_exists($this->getApiClient(), $name)) {
+            return call_user_func_array([$this->getApiClient(), $name], $arguments);
         }
     }
 
@@ -96,7 +120,7 @@ class Order
             $orderData['order_id'],
             $this->getMundipaggCustomerId($orderData['customer_id']),
             $createShippingRequest,
-            $this->settings->getModuleMetaData(),
+            $this->getSettings()->getModuleMetaData(),
             $isAntiFraudEnabled
         );
 
@@ -123,7 +147,7 @@ class Order
     public function updateCharge($chargeId, $action)
     {
         try {
-            $charges = $this->apiClient->getCharges();
+            $charges = $this->getApiClient()->getCharges();
 
             \Mundipagg\Log::create()
                 ->info(\Mundipagg\LogMessages::UPDATE_CHARGE_MUNDIPAGG_REQUEST, __METHOD__)
@@ -501,16 +525,9 @@ class Order
      */
     private function shouldSendAntiFraud($paymentMethod, $orderAmount)
     {
-        $minOrderAmount = $this->settings->getAntiFraudMinVal();
-        $antiFraudStatus = $this->settings->isAntiFraudEnabled();
-
-        if ($antiFraudStatus &&
-            $paymentMethod === 'creditCard' &&
-            $orderAmount >= $minOrderAmount
-        ) {
-            return true;
-        }
-
-        return false;
+        return
+            $paymentMethod == 'creditCard' &&
+            $this->getSettings()->isAntiFraudEnabled() &&
+            $orderAmount >= $this->getSettings()->getAntiFraudMinVal();
     }
 }
